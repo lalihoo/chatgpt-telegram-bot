@@ -147,6 +147,13 @@ async def error_handler(_: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     logging.error(f'Exception while handling an update: {context.error}')
 
+async def is_subscriber(bot, channel_id, user_id):
+    try:
+        chat_member = await bot.get_chat_member(channel_id, user_id)
+        return chat_member.status in ['member', 'administrator']
+    except Exception as e:
+        logging.error(f"Error checking subscription status: {e}")
+        return False
 
 async def is_allowed(config, update: Update, context: CallbackContext, is_inline=False) -> bool:
     """
@@ -158,6 +165,11 @@ async def is_allowed(config, update: Update, context: CallbackContext, is_inline
     user_id = update.inline_query.from_user.id if is_inline else update.message.from_user.id
     if is_admin(config, user_id):
         return True
+
+    # Проверка подписки на канал
+    if await is_subscriber(context.bot, config['CHANNEL_ID'], user_id):
+        return True
+
     name = update.inline_query.from_user.name if is_inline else update.message.from_user.name
     allowed_user_ids = config['allowed_user_ids'].split(',')
     # Check if user is allowed
